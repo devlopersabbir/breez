@@ -41,11 +41,11 @@ type TunnelReadyPayload struct {
 
 // RequestPayload represents an HTTP request framed for forwarding to CLI
 type RequestPayload struct {
-	ID      string              `json:"id"`
-	Method  string              `json:"method"`
-	Path    string              `json:"path"`
-	Headers http.Header         `json:"headers"`
-	Body    []byte              `json:"body,omitempty"`
+	ID      string      `json:"id"`
+	Method  string      `json:"method"`
+	Path    string      `json:"path"`
+	Headers http.Header `json:"headers"`
+	Body    []byte      `json:"body,omitempty"`
 }
 
 // ResponsePayload represents an HTTP response framed from CLI back to Gateway
