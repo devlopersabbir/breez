@@ -14,3 +14,7 @@ bin/
 # Temporary CI release notes
 release_notes.md
 ./bin/*
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore

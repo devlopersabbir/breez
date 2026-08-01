@@ -32,10 +32,10 @@ type TunnelSession struct {
 }
 
 type GatewayServer struct {
-	Domain     string
-	Port       int
-	tunnels    map[string]*TunnelSession // subdomain -> session
-	tunnelsMu  sync.RWMutex
+	Domain    string
+	Port      int
+	tunnels   map[string]*TunnelSession // subdomain -> session
+	tunnelsMu sync.RWMutex
 }
 
 func NewGatewayServer(domain string, port int) *GatewayServer {
