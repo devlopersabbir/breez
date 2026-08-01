@@ -43,8 +43,9 @@ func TestEndToEndTunneling(t *testing.T) {
 
 	// 3. Connect CLI in background
 	client := cli.NewClient(ts.URL, localPort, "testsub")
+	done := make(chan error, 1)
 	go func() {
-		_ = client.Serve()
+		done <- client.Serve()
 	}()
 
 	// Give handshake time to finish
@@ -78,5 +79,17 @@ func TestEndToEndTunneling(t *testing.T) {
 
 	if !bytes.Equal(body, []byte("Hello from local server!")) {
 		t.Fatalf("unexpected body: %s", string(body))
+	}
+
+	// Clean shutdown gateway tunnel connection to let client.Serve() exit gracefully
+	gwServer.tunnelsMu.Lock()
+	if session, exists := gwServer.tunnels["testsub"]; exists {
+		session.Conn.Close()
+	}
+	gwServer.tunnelsMu.Unlock()
+
+	select {
+	case <-done:
+	case <-time.After(1 * time.Second):
 	}
 }

@@ -25,19 +25,78 @@ jobs:
           cache: true
 
       - name: Bump version and push tag
-        id: tagger
-        uses: anothrNick/github-tag-action@1.67.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: true
-          DEFAULT_BUMP: patch
-          RELEASE_BRANCHES: main
+        id: auto_tag
+        run: |
+          # Fetch all tags from remote
+          git fetch --tags
+
+          # Get latest tag or default to v1.0.0
+          LATEST_TAG=$(git tag -l "v*" --sort=-v:refname | head -n 1)
+          if [ -z "$LATEST_TAG" ]; then
+            NEW_TAG="v1.0.0"
+          else
+            # Extract major, minor, patch
+            VERSION=${LATEST_TAG#v}
+            MAJOR=$(echo $VERSION | cut -d. -f1)
+            MINOR=$(echo $VERSION | cut -d. -f2)
+            PATCH=$(echo $VERSION | cut -d. -f3)
+
+            # Increment patch
+            PATCH=$((PATCH + 1))
+
+            # If patch reaches 100, reset patch to 0 and increment minor
+            if [ $PATCH -ge 100 ]; then
+              PATCH=0
+              MINOR=$((MINOR + 1))
+            fi
+
+            # If minor reaches 100, reset minor to 0 and increment major
+            if [ $MINOR -ge 100 ]; then
+              MINOR=0
+              MAJOR=$((MAJOR + 1))
+            fi
+
+            NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          fi
+
+          # Check if manual tag already exists on current commit
+          EXISTS=$(git tag --points-at HEAD)
+          if [ -n "$EXISTS" ]; then
+            echo "Manual tag found on commit: $EXISTS"
+            echo "tag=$EXISTS" >> $GITHUB_OUTPUT
+          else
+            echo "Auto-generated new tag: $NEW_TAG"
+            git tag "$NEW_TAG"
+            git push origin "$NEW_TAG"
+            echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract Release Notes from CHANGELOG.md
+        id: changelog_notes
+        run: |
+          TAG="${{ steps.auto_tag.outputs.tag }}"
+          # Extract notes between matching tag header and next section header
+          python3 -c "
+          import re, sys
+
+          tag = '$TAG'.lstrip('v')
+          content = open('CHANGELOG.md').read()
+          
+          # Match section for this tag or Unreleased
+          pattern = r'## \[(?:v?' + re.escape(tag) + r'|Unreleased)\][^\n]*\n(.*?)(?=\n## \[|\Z)'
+          match = re.search(pattern, content, re.DOTALL)
+          
+          notes = match.group(1).strip() if match else 'See CHANGELOG.md for details.'
+          with open('release_notes.md', 'w') as f:
+              f.write(notes)
+          "
+          echo "Release notes extracted into release_notes.md"
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
-          version: latest
-          args: release --clean
+          version: '~> v2'
+          args: release --clean --release-notes=release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -49,9 +49,11 @@ checksum:
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
 
+release:
+  github:
+    owner: devlopersabbir
+    name: breez
+  mode: keep_existing
+
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
+  use: github
