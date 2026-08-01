@@ -75,28 +75,23 @@ jobs:
         id: changelog_notes
         run: |
           TAG="${{ steps.auto_tag.outputs.tag }}"
-          # Extract notes between matching tag header and next section header
           python3 -c "
-          import re, sys
-
+          import re
           tag = '$TAG'.lstrip('v')
           content = open('CHANGELOG.md').read()
-          
-          # Match section for this tag or Unreleased
           pattern = r'## \[(?:v?' + re.escape(tag) + r'|Unreleased)\][^\n]*\n(.*?)(?=\n## \[|\Z)'
           match = re.search(pattern, content, re.DOTALL)
-          
           notes = match.group(1).strip() if match else 'See CHANGELOG.md for details.'
-          with open('release_notes.md', 'w') as f:
+          with open('/tmp/release_notes.md', 'w') as f:
               f.write(notes)
           "
-          echo "Release notes extracted into release_notes.md"
+          echo "Release notes extracted into /tmp/release_notes.md"
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --clean --release-notes=release_notes.md
+          args: release --clean --release-notes=/tmp/release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

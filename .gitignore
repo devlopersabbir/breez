@@ -10,3 +10,6 @@ bin/
 *.test
 *.out
 .DS_Store
+
+# Temporary CI release notes
+release_notes.md
