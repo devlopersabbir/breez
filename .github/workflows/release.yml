@@ -71,21 +71,31 @@ jobs:
             echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
           fi
 
-      - name: Extract Release Notes from CHANGELOG.md
+      - name: Extract Full CHANGELOG Notes
         id: changelog_notes
         run: |
           TAG="${{ steps.auto_tag.outputs.tag }}"
           python3 -c "
           import re
+
           tag = '$TAG'.lstrip('v')
           content = open('CHANGELOG.md').read()
+
+          # Try matching specific version section first
           pattern = r'## \[(?:v?' + re.escape(tag) + r'|Unreleased)\][^\n]*\n(.*?)(?=\n## \[|\Z)'
           match = re.search(pattern, content, re.DOTALL)
-          notes = match.group(1).strip() if match else 'See CHANGELOG.md for details.'
+
+          if match and match.group(1).strip():
+              notes = match.group(1).strip()
+          else:
+              # Fallback: Use full CHANGELOG.md content (excluding main title)
+              lines = content.splitlines()
+              notes = '\n'.join(lines[2:]).strip() if len(lines) > 2 else content.strip()
+
           with open('/tmp/release_notes.md', 'w') as f:
               f.write(notes)
           "
-          echo "Release notes extracted into /tmp/release_notes.md"
+          echo "Full release notes prepared in /tmp/release_notes.md"
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
