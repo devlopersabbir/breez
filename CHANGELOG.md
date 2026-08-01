@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [v0.1.0] - 2026-08-01
 
 ### Added
 - **Core Framing Protocol**: WebSocket payload framing supporting `TunnelInit`, `TunnelReady`, HTTP `Request`, HTTP `Response`, and Control frames (`internal/protocol`).
@@ -16,8 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Installation Scripts**:
   - Linux/macOS bash installation & uninstallation scripts (`scripts/install.sh`, `scripts/uninstall.sh`).
   - Windows PowerShell installation & uninstallation scripts (`scripts/install.ps1`, `scripts/uninstall.ps1`).
-- **CI/CD & Versioning**:
+- **Automated CI/CD & Auto-Releasing**:
   - GitHub Actions CI workflow (`.github/workflows/ci.yml`).
-  - GoReleaser release workflow (`.github/workflows/release.yml`, `.goreleaser.yaml`) supporting Linux, macOS, and Windows cross-compilation.
+  - Automated tagging (`anothrNick/github-tag-action`) & GoReleaser release workflow (`.github/workflows/release.yml`, `.goreleaser.yaml`) for automatic version increments on pushes to `main`.
 - **Documentation**: Project README (`README.md`) and initial architecture spec (`initial.md`).
 - **Testing**: End-to-end integration tests verifying request forwarding from Gateway to CLI to local target server.
