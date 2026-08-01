@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"github.com/devlopersabbir/breez/internal/protocol"
+	"github.com/fatih/color"
 	"github.com/gorilla/websocket"
 )
 
@@ -43,7 +43,14 @@ func (c *Client) Serve() error {
 	}
 	wsURL := fmt.Sprintf("%s://%s/_breez/ws", wsScheme, u.Host)
 
-	fmt.Printf("Connecting to Breez Gateway at %s...\n", wsURL)
+	boldCyan := color.New(color.FgCyan, color.Bold).SprintfFunc()
+	boldGreen := color.New(color.FgGreen, color.Bold).SprintfFunc()
+	boldYellow := color.New(color.FgYellow, color.Bold).SprintfFunc()
+	dim := color.New(color.FgHiBlack).SprintfFunc()
+
+	fmt.Println(boldCyan("\n  ☁  Breez Local Tunnel"))
+	fmt.Println(dim("  ---------------------------------------------"))
+	fmt.Printf("  %s Connecting to %s...\n", color.YellowString("➜"), wsURL)
 
 	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
 	if err != nil {
@@ -80,11 +87,14 @@ func (c *Client) Serve() error {
 	var ready protocol.TunnelReadyPayload
 	_ = json.Unmarshal(frame.Payload, &ready)
 
-	fmt.Println("\n✔ Tunnel Created Successfully!")
-	fmt.Printf("Local:  http://localhost:%d\n", c.LocalPort)
-	fmt.Printf("Public: %s\n", ready.URL)
-	fmt.Println("Status: Connected (Press Ctrl+C to stop)")
-	fmt.Println(stringsRepeat("-", 45))
+	fmt.Println()
+	fmt.Println(boldGreen("  ✔ Tunnel Established Successfully!"))
+	fmt.Println(dim("  ---------------------------------------------"))
+	fmt.Printf("  %-12s %s\n", color.HiWhiteString("Local:"), color.CyanString("http://localhost:%d", c.LocalPort))
+	fmt.Printf("  %-12s %s\n", color.HiWhiteString("Public:"), color.GreenString(ready.URL))
+	fmt.Printf("  %-12s %s\n", color.HiWhiteString("Status:"), boldGreen("Online"))
+	fmt.Println(dim("  ---------------------------------------------"))
+	fmt.Println(boldYellow("  Requests Log:") + dim(" (Press Ctrl+C to stop)\n"))
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
@@ -96,7 +106,6 @@ func (c *Client) Serve() error {
 		for {
 			_, message, err := conn.ReadMessage()
 			if err != nil {
-				log.Printf("\n[CLI] Disconnected from gateway: %v", err)
 				return
 			}
 
@@ -116,7 +125,7 @@ func (c *Client) Serve() error {
 
 	select {
 	case <-interrupt:
-		fmt.Println("\nStopping tunnel...")
+		fmt.Println(color.YellowString("\n  Disconnecting tunnel..."))
 	case <-done:
 	}
 
@@ -130,6 +139,7 @@ func (c *Client) handleLocalRequest(conn *websocket.Conn, req *protocol.RequestP
 	httpReq, err := http.NewRequest(req.Method, targetURL, bytes.NewReader(req.Body))
 	if err != nil {
 		c.sendErrorResponse(conn, req.ID, http.StatusInternalServerError, err.Error())
+		c.logRequest(req.Method, req.Path, http.StatusInternalServerError, time.Since(startTime))
 		return
 	}
 
@@ -139,7 +149,7 @@ func (c *Client) handleLocalRequest(conn *websocket.Conn, req *protocol.RequestP
 	resp, err := client.Do(httpReq)
 	if err != nil {
 		c.sendErrorResponse(conn, req.ID, http.StatusBadGateway, fmt.Sprintf("Local service error: %v", err))
-		fmt.Printf("➜ %s %s [502 Bad Gateway] (%s)\n", req.Method, req.Path, time.Since(startTime).Round(time.Millisecond))
+		c.logRequest(req.Method, req.Path, http.StatusBadGateway, time.Since(startTime))
 		return
 	}
 	defer resp.Body.Close()
@@ -159,7 +169,26 @@ func (c *Client) handleLocalRequest(conn *websocket.Conn, req *protocol.RequestP
 	})
 
 	_ = conn.WriteMessage(websocket.TextMessage, respFrame)
-	fmt.Printf("➜ %s %s [%d] (%s)\n", req.Method, req.Path, resp.StatusCode, time.Since(startTime).Round(time.Millisecond))
+	c.logRequest(req.Method, req.Path, resp.StatusCode, time.Since(startTime))
+}
+
+func (c *Client) logRequest(method string, path string, statusCode int, duration time.Duration) {
+	var statusStr string
+	switch {
+	case statusCode >= 200 && statusCode < 300:
+		statusStr = color.GreenString("[%d OK]", statusCode)
+	case statusCode >= 300 && statusCode < 400:
+		statusStr = color.CyanString("[%d Redirect]", statusCode)
+	case statusCode >= 400 && statusCode < 500:
+		statusStr = color.YellowString("[%d Client Error]", statusCode)
+	default:
+		statusStr = color.RedString("[%d Server Error]", statusCode)
+	}
+
+	methodStr := color.New(color.FgHiWhite, color.Bold).Sprintf("%-6s", method)
+	durationStr := color.HiBlackString("(%s)", duration.Round(time.Millisecond))
+
+	fmt.Printf("  %s %s %s %s\n", methodStr, path, statusStr, durationStr)
 }
 
 func (c *Client) sendErrorResponse(conn *websocket.Conn, reqID string, status int, msg string) {
@@ -177,12 +206,4 @@ func (c *Client) sendErrorResponse(conn *websocket.Conn, reqID string, status in
 	})
 
 	_ = conn.WriteMessage(websocket.TextMessage, respFrame)
-}
-
-func stringsRepeat(s string, count int) string {
-	res := ""
-	for i := 0; i < count; i++ {
-		res += s
-	}
-	return res
 }
