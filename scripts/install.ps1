@@ -16,6 +16,7 @@ $tarName = "breez_${version}_windows_${arch}.zip"
 $downloadUrl = "https://github.com/$repo/releases/download/$tag/$tarName"
 
 $tempZip = Join-Path $env:TEMP $tarName
+$tempDir = Join-Path $env:TEMP "breez-install-$version"
 
 Write-Host "Downloading $downloadUrl..."
 Invoke-WebRequest -Uri $downloadUrl -OutFile $tempZip
@@ -24,10 +25,16 @@ if (!(Test-Path -Path $installDir)) {
     New-Item -ItemType Directory -Path $installDir | Out-Null
 }
 
+if (Test-Path -Path $tempDir) {
+    Remove-Item -Path $tempDir -Recurse -Force
+}
+New-Item -ItemType Directory -Path $tempDir | Out-Null
+
 Expand-Archive -Path $tempZip -DestinationPath $tempDir -Force
 Copy-Item -Path (Join-Path $tempDir $binaryName) -Destination $installDir -Force
 
 Remove-Item -Path $tempZip -Force
+Remove-Item -Path $tempDir -Recurse -Force
 
 # Add to User PATH if missing
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
@@ -36,5 +43,5 @@ if ($userPath -notlike "*$installDir*") {
     Write-Host "Added $installDir to your User PATH variable."
 }
 
-Write-Host "✔ Breez successfully installed to $installDir\$binaryName"
+Write-Host "Breez successfully installed to $installDir\$binaryName"
 Write-Host "Please restart your terminal session and run 'breez version'!"
