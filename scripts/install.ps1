@@ -43,5 +43,11 @@ if ($userPath -notlike "*$installDir*") {
     Write-Host "Added $installDir to your User PATH variable."
 }
 
-Write-Host "Breez successfully installed to $installDir\$binaryName"
-Write-Host "Please restart your terminal session and run 'breez version'!"
+# Update PATH for the current active session as well
+if ($env:Path -notlike "*$installDir*") {
+    $env:Path = "$env:Path;$installDir"
+}
+
+Write-Host "✔ Breez successfully installed to $installDir\$binaryName"
+Write-Host "You can now run 'breez version' directly!"
+
