@@ -7,12 +7,12 @@ Breez is an open-source, developer-focused tunneling tool built in Go. It secure
 
 ## Core Features
 
-- ⚡ **Instant Public URLs**: Expose local ports (`localhost:3000`) to the public internet in seconds.
-- 🚀 **Lightweight & Fast**: Single binary written in Go with minimal resource overhead.
-- 🔄 **Multiplexed WebSockets**: Efficient HTTP request & response framing over WebSocket connections.
-- 🌐 **Random Subdomains**: Auto-allocated clean subdomains for every active tunnel session.
+- 🌐 **Local DNS (`*.breez.local`)**: Zero-latency local domain resolution directly to your local ports without requiring internet.
+- ⚡ **Instant Public URLs**: Expose local ports (`localhost:3000`) to the public internet via secure WebSocket tunnels.
+- 🔀 **Smart Local Reverse Proxy**: Map custom names (`myapp.breez.local`) directly to any local service (`localhost:3000`).
+- 🎨 **Elevated Terminal UI/UX**: Real-time request monitoring with color-coded HTTP method badges, status codes, and latency tracking.
+- 🚀 **Single Lightweight Binary**: High-performance Go binary with minimal resource overhead.
 - 💻 **Cross-Platform**: Support for Linux, macOS, and Windows.
-- 🔒 **Secure Protocol**: Built for secure HTTP/HTTPS transport.
 
 ---
 
@@ -50,35 +50,57 @@ iwr -useb https://raw.githubusercontent.com/devlopersabbir/breez/main/scripts/un
 
 ## Usage & Examples
 
-### Expose a Local Development Server
+### 1. Local Development (`*.breez.local`)
 
-To expose a local web application running on port `3000`:
+Assign a clean, zero-latency local domain to your development server:
 
 ```bash
-breez serve 3000
+breez start 3000 --name myapp
 ```
 
 **Output:**
-
 ```text
-✔ Tunnel Created Successfully!
+  ┌────────────────────────────────────────────────────────┐
+  │  ☁  BREEZ  v0.2.0                    ● Online (Local)  │
+  ├────────────────────────────────────────────────────────┤
+  │  Local Domain:  http://myapp.breez.local               │
+  │  Target Port:   http://localhost:3000                  │
+  │  DNS Resolver:  127.0.0.1:53 (*.breez.local)           │
+  ├────────────────────────────────────────────────────────┤
+  │  [o] Open in Browser   [c] Copy URL   [q] Quit         │
+  └────────────────────────────────────────────────────────┘
 
-Local:  http://localhost:3000
-Public: http://k72mfa.breez.run
+  Live Request Logs: (monitoring local traffic...)
 
-Status: Connected (Press Ctrl+C to stop)
----------------------------------------------
-➜ GET / 200 (12ms)
-➜ POST /api/webhooks 200 (35ms)
+  14:52:10  GET     /api/v1/health   [200 OK]        1.2ms
+  14:52:12  POST    /api/v1/users    [201 Created]  14.8ms
+  14:52:15  GET     /assets/logo.png [304 Cache]     0.8ms
 ```
 
-### Request a Specific Subdomain
+### 2. Dual Tunnel (Local DNS + Public Internet)
+
+Expose your service publicly while keeping local domain access:
 
 ```bash
 breez serve 3000 --subdomain myapp
 ```
 
-### Check Installed Version
+### 3. List Active Routes
+
+```bash
+breez list
+```
+
+### 4. Local DNS Resolver Setup (macOS)
+
+One-command setup to route `*.breez.local` queries locally via `/etc/resolver`:
+
+```bash
+breez dns setup
+breez dns status
+```
+
+### 5. Check Installed Version
 
 ```bash
 breez version
